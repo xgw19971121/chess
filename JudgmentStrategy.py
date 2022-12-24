@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from ChessBoard import *
 from scipy.ndimage import label as CCL
+import copy
 
 class JudgmentStrategy(ABC):
     def __init__(self) -> None:
@@ -186,4 +187,338 @@ class WeiqiJudgment(JudgmentStrategy):
             else: chessBoard.ko = [0,-1,-1]
             chessBoard.board[i][j] = 0
             return True   
+
+
+class ReversiJudgment(JudgmentStrategy):
+    def __init__(self) -> None:
+        super().__init__()
+        
+
+    def victory(self, chessBoard, x, y, flag) -> int:
+        if(chessBoard.num[0]+chessBoard.num[1] == 64 or (chessBoard.nostep[0] == True and chessBoard.nostep[1] == True)):
+            if(chessBoard.num[0] > chessBoard.num[1]):
+                return 0
+            elif(chessBoard.num[0] < chessBoard.num[1]):
+                return 1
+            else:
+                return 2
+        return -1
+
+    def isOk(self, chessBoard, x, y, flag) -> bool:
+        ok = False
+        if(flag): # 检查是否能落子
+            if(chessBoard.board[x][y] != 0):
+                return False
+
+            # 检查是否可以翻转
+            p1 = chessBoard.piece[chessBoard.nstep%2+1]
+            p2 = chessBoard.piece[(chessBoard.nstep+1)%2+1]
+
+            # 下
+            i = 1
+            count = 0
+            while(x+i < chessBoard.w):
+                if(chessBoard.board[x+i,y] == 0 or chessBoard.board[x+1,y] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x+i,y] == p2):
+                    count += 1
+                if(chessBoard.board[x+i,y] == p1 and count > 0):
+                    ok = True
+                    # 提前终止，表示发现翻转节点
+                    for xi in range(x,x+i):
+                        chessBoard.board[xi,y] = p1
+                    chessBoard.num[chessBoard.nstep%2] += count
+                    chessBoard.num[(chessBoard.nstep+1)%2] -= count
+                    break
+                i += 1
+
+            # 上
+            i = -1
+            count = 0
+            while(x+i >= 0):
+                if(chessBoard.board[x+i,y] == 0 or chessBoard.board[x-1,y] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x+i,y] == p2):
+                    count += 1
+                if(chessBoard.board[x+i,y] == p1 and count > 0):
+                    ok = True
+                    # 提前终止，表示发现翻转节点
+                    for xi in range(x+i,x):
+                        chessBoard.board[xi,y] = p1
+                    chessBoard.num[chessBoard.nstep%2] += count
+                    chessBoard.num[(chessBoard.nstep+1)%2] -= count
+                    break
+                    
+                i -= 1
+
+            # 右
+            i = 1
+            count = 0
+            while(y+i < chessBoard.w):
+                if(chessBoard.board[x,y+i] == 0 or chessBoard.board[x,y+1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x,y+i] == p2):
+                    count += 1
+                if(chessBoard.board[x,y+i] == p1 and count > 0):
+                    ok = True
+                    # 提前终止，表示发现翻转节点
+                    for yi in range(y,y+i):
+                        chessBoard.board[x,yi] = p1
+                    chessBoard.num[chessBoard.nstep%2] += count
+                    chessBoard.num[(chessBoard.nstep+1)%2] -= count
+                    break
+                i += 1
+
+            # 左
+            i = -1
+            count = 0
+            while(y+i >= 0):
+                if(chessBoard.board[x,y+i] == 0 or chessBoard.board[x,y-1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x,y+i] == p2):
+                    count += 1
+                if(chessBoard.board[x,y+i] == p1 and count > 0):
+                    ok = True
+                    # 提前终止，表示发现翻转节点
+                    for yi in range(y+i,y):
+                        chessBoard.board[x,yi] = p1
+                    chessBoard.num[chessBoard.nstep%2] += count
+                    chessBoard.num[(chessBoard.nstep+1)%2] -= count
+                    break
+                i -= 1
+
+            # 右下
+            i = 1
+            count = 0
+            while(x+i<chessBoard.w and y+i<chessBoard.w):
+                if(chessBoard.board[x+i,y+i] == 0 or chessBoard.board[x+1,y+1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x+i,y+i] == p2):
+                    count += 1
+                if(chessBoard.board[x+i,y+i] == p1 and count > 0):
+                    ok = True
+                    # 提前终止，表示发现翻转节点
+                    for j in range(1,i):
+                        chessBoard.board[x+j,y+j] = p1
+                    chessBoard.num[chessBoard.nstep%2] += count
+                    chessBoard.num[(chessBoard.nstep+1)%2] -= count
+                    break
+                i += 1
+
+
+            # 左上
+            i = -1
+            count = 0
+            while(x+i>=0 and y+i>=0):
+                if(chessBoard.board[x+i,y+i] == 0 or chessBoard.board[x-1,y-1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x+i,y+i] == p2):
+                    count += 1
+                if(chessBoard.board[x+i,y+i] == p1 and count > 0):
+                    ok = True
+                    # 提前终止，表示发现翻转节点
+                    for j in range(i,0):
+                        chessBoard.board[x+j,y+j] = p1
+                    chessBoard.num[chessBoard.nstep%2] += count
+                    chessBoard.num[(chessBoard.nstep+1)%2] -= count
+                    break
+                i -= 1
+
+            # 左下
+            i = 1
+            count = 0
+            while(x+i<chessBoard.w and y-i>=0):
+                if(chessBoard.board[x+i,y-i] == 0 or chessBoard.board[x+1,y-1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x+i,y-i] == p2):
+                    count += 1
+                if(chessBoard.board[x+i,y-i] == p1 and count > 0):
+                    ok = True
+                    # 提前终止，表示发现翻转节点
+                    for j in range(1,i):
+                        chessBoard.board[x+j,y-j] = p1
+                    chessBoard.num[chessBoard.nstep%2] += count
+                    chessBoard.num[(chessBoard.nstep+1)%2] -= count
+                    break
+                i += 1
+            
+            # 右上
+            i = 1
+            count = 0
+            while(x-i>=0 and y+i<chessBoard.w):
+                if(chessBoard.board[x-i,y+i] == 0 or chessBoard.board[x-1,y+1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x-i,y+i] == p2):
+                    count += 1
+                if(chessBoard.board[x-i,y+i] == p1 and count > 0):
+                    ok = True
+                    # 提前终止，表示发现翻转节点
+                    for j in range(1,i):
+                        chessBoard.board[x-j,y+j] = p1
+                    chessBoard.num[chessBoard.nstep%2] += count
+                    chessBoard.num[(chessBoard.nstep+1)%2] -= count
+                    break
+                i += 1
+            if(ok):
+                chessBoard.num[chessBoard.nstep%2] += 1
+                chessBoard.nostep[chessBoard.nstep%2] = False
+                print("x={},y={}".format(x,y))
+
+        else:
+            point = np.where(chessBoard.board == 0)
+            for i in range(len(point[0])):
+                x = point[0][i]
+                y = point[1][i]
+                board = copy.deepcopy(chessBoard)
+                if(self.isOk(board,x,y,True) == True):
+                    print(chessBoard.board)
+                    return False
+            return True
+
+        return ok
+
+    def test(self, chessBoard, x, y, flag) -> bool:
+        ok = False
+        if(flag): # 检查是否能落子
+            if(chessBoard.board[x][y] != 0):
+                return False
+
+            # 检查是否可以翻转
+            p1 = chessBoard.piece[chessBoard.nstep%2+1]
+            p2 = chessBoard.piece[(chessBoard.nstep+1)%2+1]
+
+            # 下
+            i = 1
+            count = 0
+            while(x+i < chessBoard.w):
+                if(chessBoard.board[x+i,y] == 0 or chessBoard.board[x+1,y] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x+i,y] == p2):
+                    count += 1
+                if(chessBoard.board[x+i,y] == p1 and count > 0):
+                    ok = True
+                    return ok
+                i += 1
+
+            # 上
+            i = -1
+            count = 0
+            while(x+i >= 0):
+                if(chessBoard.board[x+i,y] == 0 or chessBoard.board[x-1,y] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x+i,y] == p2):
+                    count += 1
+                if(chessBoard.board[x+i,y] == p1 and count > 0):
+                    ok = True
+                    return ok
+                    
+                i -= 1
+
+            # 右
+            i = 1
+            count = 0
+            while(y+i < chessBoard.w):
+                if(chessBoard.board[x,y+i] == 0 or chessBoard.board[x,y+1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x,y+i] == p2):
+                    count += 1
+                if(chessBoard.board[x,y+i] == p1 and count > 0):
+                    ok = True
+                    return ok
+                i += 1
+
+            # 左
+            i = -1
+            count = 0
+            while(y+i >= 0):
+                if(chessBoard.board[x,y+i] == 0 or chessBoard.board[x,y-1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x,y+i] == p2):
+                    count += 1
+                if(chessBoard.board[x,y+i] == p1 and count > 0):
+                    ok = True
+                    return ok
+                i -= 1
+
+            # 右下
+            i = 1
+            count = 0
+            while(x+i<chessBoard.w and y+i<chessBoard.w):
+                if(chessBoard.board[x+i,y+i] == 0 or chessBoard.board[x+1,y+1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x+i,y+i] == p2):
+                    count += 1
+                if(chessBoard.board[x+i,y+i] == p1 and count > 0):
+                    ok = True
+                    return ok
+                i += 1
+
+
+            # 左上
+            i = -1
+            count = 0
+            while(x+i>=0 and y+i>=0):
+                if(chessBoard.board[x+i,y+i] == 0 or chessBoard.board[x-1,y-1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x+i,y+i] == p2):
+                    count += 1
+                if(chessBoard.board[x+i,y+i] == p1 and count > 0):
+                    ok = True
+                    return ok
+                i -= 1
+
+            # 左下
+            i = 1
+            count = 0
+            while(x+i<chessBoard.w and y-i>=0):
+                if(chessBoard.board[x+i,y-i] == 0 or chessBoard.board[x+1,y-1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x+i,y-i] == p2):
+                    count += 1
+                if(chessBoard.board[x+i,y-i] == p1 and count > 0):
+                    ok = True
+                    return ok
+                i += 1
+            
+            # 右上
+            i = 1
+            count = 0
+            while(x-i>=0 and y+i<chessBoard.w):
+                if(chessBoard.board[x-i,y+i] == 0 or chessBoard.board[x-1,y+1] == p1):
+                    # 无落子
+                    break
+                if(chessBoard.board[x-i,y+i] == p2):
+                    count += 1
+                if(chessBoard.board[x-i,y+i] == p1 and count > 0):
+                    ok = True
+                    return ok
+                i += 1
+
+        else:
+            point = np.where(chessBoard.board == 0)
+            for i in range(len(point[0])):
+                x = point[0][i]
+                y = point[1][i]
+                board = copy.deepcopy(chessBoard)
+                if(self.test(board,x,y,True) == True):
+                    print(chessBoard.board)
+                    return False
+            return True
+
+        return ok
  
