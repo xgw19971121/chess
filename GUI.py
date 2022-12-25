@@ -46,7 +46,7 @@ class GameShow:
 
     
     def initLoginGUI(self):
-        self.LoginRoot = Frame(self.root, width=1000, height=1000)
+        self.LoginRoot = Frame(self.root, width=620, height=500)
         self.LoginRoot.pack(side=LEFT)
         self.LoginDict = {}
         labelUser = Label(self.LoginRoot, text='User Name:',fg='yellow',bg='purple',font=("微软雅黑",16), justify=tkinter.RIGHT, anchor='e', width=80)
@@ -74,6 +74,11 @@ class GameShow:
         # 注册按钮
         registerButton = Button(self.LoginRoot, text='注册', command=self.register)
         registerButton.place(x=360, y=175, width=80, height=25)
+
+        LoginText = Text(self.LoginRoot, height=14,font=("微软雅黑",16))
+        LoginText.place(x=150, y=230, width=320, height=200)
+        LoginText.insert("insert","游客登录:\n请输入账户'游客1'或'游客2'，密码为空\n\nAI模式:\n请输入账户'AI1','AI2','AI3'密码为空，分别对应不同智能的AI")
+        LoginText.configure(state="disabled")
 
         self.LoginDict['labelUser'] = labelUser
         self.LoginDict['varName'] = varName
